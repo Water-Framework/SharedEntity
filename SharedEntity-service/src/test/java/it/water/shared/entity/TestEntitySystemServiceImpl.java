@@ -21,6 +21,7 @@ import it.water.core.api.repository.query.Query;
 import it.water.core.api.repository.query.QueryBuilder;
 import it.water.core.api.repository.query.QueryOrder;
 import it.water.core.interceptors.annotations.FrameworkComponent;
+import it.water.repository.entity.model.exceptions.NoResultException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +48,8 @@ public class TestEntitySystemServiceImpl implements TestEntitySystemApi {
 
     @Override
     public TestEntityResource find(long id) {
+        if(!localDb.containsKey(id))
+            throw new NoResultException();
         return localDb.get(id);
     }
 

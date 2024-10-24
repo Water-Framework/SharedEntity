@@ -13,6 +13,7 @@ import it.water.core.api.service.BaseEntitySystemApi;
 import it.water.core.api.service.integration.UserIntegrationClient;
 import it.water.core.interceptors.annotations.FrameworkComponent;
 import it.water.core.interceptors.annotations.Inject;
+import it.water.core.model.exceptions.WaterRuntimeException;
 import it.water.core.permission.action.CrudActions;
 import it.water.core.permission.action.ShareAction;
 import it.water.core.permission.annotations.AllowGenericPermissions;
@@ -91,12 +92,24 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Saves a given WaterSharedEntity if the user has the necessary permissions and
+     * the entity is a shared entity.
+     *
+     * @param entity The WaterSharedEntity to be saved, containing the necessary details
+     *               like entity resource name, entity ID, and user ID.
+     * @return The saved WaterSharedEntity.
+     * @throws UnauthorizedException If the entity is not a shared entity, the user is
+     *                               not authorized, or if the user does not have the
+     *                               necessary permissions.
+     * @throws EntityNotFound If the entity could not be found in the system.
+     */
     @Override
     public WaterSharedEntity save(WaterSharedEntity entity) {
-        Class<?> entityClass = (entity.getEntityResourceName() != null) ? getEntityClass(entity.getEntityResourceName()) : null;
+        Class<?> entityClass = getEntityClass(entity.getEntityResourceName());
 
-        if (!OwnedResource.class.isAssignableFrom(entityClass)) {
-            throw new UnauthorizedException("Entity is not a Shared Entity!");
+        if (entityClass == null || !SharedEntity.class.isAssignableFrom(entityClass)) {
+            throw new UnauthorizedException("Entity is not a Shared Entity or Shared Entity Class not found!");
         }
 
         User user;
@@ -107,35 +120,25 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
         }
         //Custom check on permission system
         //check if the user has the share permission for the entity identified by entityResourceName
-        if (entityClass == null || (!user.isAdmin() && (actionsManager.getActions().get(entityClass.getName()) == null || !permissionManager.checkPermission(runtime.getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))))) {
+        if ((!user.isAdmin() && (actionsManager.getActions().get(entityClass.getName()) == null || !permissionManager.checkPermission(runtime.getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))))) {
             throw new UnauthorizedException();
         }
-        if (entityClass == null || !SharedEntity.class.isAssignableFrom(entityClass)) {
-            throw new RuntimeException("Entity " + entity.getEntityResourceName() + " is not a SharedEntity");
-        }
-        BaseEntitySystemApi<? extends WaterSharedEntity> systemService = this.componentRegistry.findEntitySystemApi(entity.getEntityResourceName());
+
+        BaseEntitySystemApi<? extends WaterSharedEntity> entitySystemService = this.componentRegistry.findEntitySystemApi(entity.getEntityResourceName());
         Resource resource;
         try {
-            resource = systemService.find(entity.getEntityId());
+            resource = entitySystemService.find(entity.getEntityId());
         } catch (NoResultException exception) {
             throw new EntityNotFound();
         }
         if (!permissionManager.checkUserOwnsResource(user, resource)) {
             throw new UnauthorizedException();
         }
-        String entityClassName = entityClass.getName();
-        return doSave(entityClassName, entity, systemService);
+        return doSave(entity, (SharedEntity) resource);
     }
 
 
-    private WaterSharedEntity doSave(String entityClassName, WaterSharedEntity entity, BaseEntitySystemApi<? extends WaterSharedEntity> entitySystemService) {
-        SharedEntity e;
-        try {
-            e = (SharedEntity) entitySystemService.find(entity.getEntityId());
-        } catch (NoResultException ex) {
-            throw new EntityNotFound();
-        }
-
+    private WaterSharedEntity doSave(WaterSharedEntity entity, SharedEntity e) {
         //check if the user owner of the entity is the logged one
         User u = e.getUserOwner();
         if (u.getId() != runtime.getSecurityContext().getLoggedEntityId()) {
@@ -149,6 +152,14 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
         return super.save(entity);
     }
 
+    /**
+     * Finds a WaterSharedEntity by its primary key, which includes the entity resource name, entity ID, and user ID.
+     *
+     * @param entityResourceName the name of the entity resource.
+     * @param entityId the ID of the entity.
+     * @param userId the ID of the user.
+     * @return the WaterSharedEntity object that matches the given primary key or null if no such entity is found.
+     */
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @AllowPermissionsOnReturn(actions = CrudActions.FIND)
     @Override
@@ -157,24 +168,33 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
     }
 
 
+    /**
+     * Removes an entity identified by primary key and resource name if the user has the necessary permissions
+     * and ownership.
+     *
+     * @param entity The shared entity to be removed, which includes the entity resource name,
+     *               entity ID, and user ID.
+     */
     @Override
     @AllowGenericPermissions(actions = CrudActions.REMOVE)
     public void removeByPK(WaterSharedEntity entity) {
         this.getLog().debug("Service Remove entity {}", entity);
 
         Class<?> entityClass = getEntityClass(entity.getEntityResourceName());
+        if(entityClass == null)
+            throw new UnauthorizedException("Entity is not a Shared Entity or Shared Entity Class not found!");
 
         //check if the user has the share permission for the entity identified by entityResourceName
         if (!permissionManager.checkPermission(runtime.getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))) {
             throw new UnauthorizedException();
         } else {
             //get the system service of the entity identified by entityResourceName
-            BaseEntitySystemApi<? extends SharedEntity> systemService = this.componentRegistry.findEntitySystemApi(entityClass.getName());
+            BaseEntitySystemApi<? extends SharedEntity> entitySystemService = this.componentRegistry.findEntitySystemApi(entityClass.getName());
 
             //find the entity
             SharedEntity e;
             try {
-                e = systemService.find(entity.getEntityId());
+                e = entitySystemService.find(entity.getEntityId());
             } catch (NoResultException ex) {
                 throw new EntityNotFound();
             }
@@ -202,6 +222,13 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
         }
     }
 
+    /**
+     * Finds and returns a list of shared entities based on the given entity resource name and entity ID.
+     *
+     * @param entityResourceName the name of the entity resource to search for.
+     * @param entityId the ID of the entity to search for.
+     * @return a list of WaterSharedEntity objects that match the specified entity resource name and entity ID.
+     */
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @Override
     public List<WaterSharedEntity> findByEntity(String entityResourceName, long entityId) {
@@ -209,18 +236,38 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
                 systemService.findByEntity(entityResourceName, entityId);
     }
 
+    /**
+     * Finds and returns a list of shared entities associated with the specified user ID.
+     *
+     * @param userId the ID of the user whose shared entities should be retrieved.
+     * @return a list of WaterSharedEntity objects that are associated with the specified user ID.
+     */
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @Override
     public List<WaterSharedEntity> findByUser(long userId) {
         return systemService.findByUser(userId);
     }
 
+    /**
+     * Retrieves a list of IDs of users who have sharing permissions on the specified entity.
+     *
+     * @param entityResourceName the name of the entity resource to search for sharing users.
+     * @param entityId the ID of the entity for which sharing users are to be retrieved.
+     * @return a list of user IDs who have sharing permissions on the specified entity.
+     */
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @Override
     public List<Long> getSharingUsers(String entityResourceName, long entityId) {
         return systemService.getSharingUsers(entityResourceName, entityId);
     }
 
+    /**
+     * Retrieves a list of entity IDs shared with a particular user.
+     *
+     * @param entityResourceName the name of the entity resource to search for shared entities.
+     * @param userId the ID of the user with whom the entities are shared.
+     * @return a list of entity IDs that are shared with the specified user.
+     */
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @Override
     public List<Long> getEntityIdsSharedWithUser(String entityResourceName, long userId) {
@@ -231,8 +278,9 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
         try {
             return Class.forName(resourceName);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Class " + resourceName + " not found");
+            getLog().error(e.getMessage(),e);
         }
+        return null;
     }
 
     private void setSharedEntityUserId(WaterSharedEntity entity) {
@@ -255,7 +303,7 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
                 // find the user
                 this.userIntegrationClient.fetchUserByUserId(entity.getUserId());
             } catch (NoResultException ex) {
-                throw new RuntimeException("Impossible to share the specified resource");
+                throw new WaterRuntimeException("Impossible to share the specified resource");
             }
         }
     }

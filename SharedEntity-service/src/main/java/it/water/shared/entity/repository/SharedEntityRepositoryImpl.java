@@ -10,10 +10,7 @@ import it.water.shared.entity.model.WaterSharedEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -23,10 +20,10 @@ import java.util.stream.Collectors;
 @FrameworkComponent
 public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterSharedEntity> implements SharedEntityRepository {
     private static Logger log = LoggerFactory.getLogger(SharedEntityRepositoryImpl.class);
-    private static final String SHAREDENTITY__PERSISTENCE_UNIT = "sharedentity-persistence-unit";
+    private static final String SHAREDENTITY_PERSISTENCE_UNIT = "sharedentity-persistence-unit";
 
     public SharedEntityRepositoryImpl() {
-        super(WaterSharedEntity.class, SHAREDENTITY__PERSISTENCE_UNIT);
+        super(WaterSharedEntity.class, SHAREDENTITY_PERSISTENCE_UNIT);
     }
 
     @Override
@@ -62,7 +59,7 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
         } catch (NoResultException | jakarta.persistence.NoResultException e) {
             log.debug("No entity to remove with entityResourceName: {} entityId: {}", entityResourceName, entityId);
         }
-        return null;
+        return Collections.emptyList();
     }
 
     @Override
@@ -75,16 +72,16 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
         } catch (NoResultException | jakarta.persistence.NoResultException e) {
             log.debug("No entity to remove with userId:{}", userId);
         }
-        return null;
+        return Collections.emptyList();
     }
 
     @Override
     public List<Long> getSharingUsers(String entityResourceName, long entityId) {
-        log.debug("Repository invoke getSharingUsers with entityResourceName {} and entityId {}", this.getType().getSimpleName(), entityResourceName, entityId);
+        log.debug("Repository invoke getSharingUsers with type: {} and entityResourceName {} and entityId {}", this.getType().getSimpleName(), entityResourceName, entityId);
         Query entityIdQ = this.getQueryBuilderInstance().field("entityId").equalTo(entityId);
         Query resourceNameQ = this.getQueryBuilderInstance().field("entityResourceName").equalTo(entityResourceName);
         Collection<WaterSharedEntity> results = this.findAll(-1, -1, entityIdQ.and(resourceNameQ), null).getResults();
-        Set<Long> userIds = results.stream().map(sharedEntity -> sharedEntity.getUserId()).collect(Collectors.toSet());
+        Set<Long> userIds = results.stream().map(WaterSharedEntity::getUserId).collect(Collectors.toSet());
         return new ArrayList<>(userIds);
     }
 
@@ -94,7 +91,7 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
         Query entityIdQ = this.getQueryBuilderInstance().field("userId").equalTo(userId);
         Query resourceNameQ = this.getQueryBuilderInstance().field("entityResourceName").equalTo(entityResourceName);
         Collection<WaterSharedEntity> results = this.findAll(-1, -1, entityIdQ.and(resourceNameQ), null).getResults();
-        Set<Long> entityIds = results.stream().map(sharedEntity -> sharedEntity.getUserId()).collect(Collectors.toSet());
+        Set<Long> entityIds = results.stream().map(WaterSharedEntity::getEntityId).collect(Collectors.toSet());
         return new ArrayList<>(entityIds);
     }
 }

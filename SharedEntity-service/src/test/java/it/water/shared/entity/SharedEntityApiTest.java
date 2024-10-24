@@ -14,6 +14,7 @@ import it.water.core.testing.utils.bundle.TestRuntimeInitializer;
 import it.water.core.testing.utils.junit.WaterTestExtension;
 import it.water.core.testing.utils.runtime.TestRuntimeUtils;
 import it.water.repository.entity.model.exceptions.DuplicateEntityException;
+import it.water.repository.entity.model.exceptions.EntityNotFound;
 import it.water.shared.entity.api.SharedEntityApi;
 import it.water.shared.entity.api.SharedEntityRepository;
 import it.water.shared.entity.api.SharedEntitySystemApi;
@@ -33,7 +34,7 @@ import java.util.List;
 @ExtendWith(WaterTestExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class SharedEntityApiTest implements Service {
+class SharedEntityApiTest implements Service {
 
     @Inject
     @Setter
@@ -79,13 +80,14 @@ public class SharedEntityApiTest implements Service {
     private it.water.core.api.model.User sharedEntityManagerUser;
     private it.water.core.api.model.User sharedEntityViewerUser;
     private it.water.core.api.model.User sharedEntityEditorUser;
+    private it.water.core.api.model.User noPermissionsUser;
 
     private Role sharedEntityManagerRole;
     private Role sharedEntityViewerRole;
     private Role sharedEntityEditorRole;
 
     @BeforeAll
-    public void beforeAll() {
+    void beforeAll() {
         //getting user
         sharedEntityManagerRole = roleManager.getRole(WaterSharedEntity.DEFAULT_MANAGER_ROLE);
         sharedEntityViewerRole = roleManager.getRole(WaterSharedEntity.DEFAULT_VIEWER_ROLE);
@@ -98,6 +100,7 @@ public class SharedEntityApiTest implements Service {
         sharedEntityManagerUser = userManager.addUser("manager", "name", "lastname", "manager@a.com", "Password1_", "salt", false);
         sharedEntityViewerUser = userManager.addUser("viewer", "name", "lastname", "viewer@a.com", "Password1_", "salt", false);
         sharedEntityEditorUser = userManager.addUser("editor", "name", "lastname", "editor@a.com", "Password1_", "salt", false);
+        noPermissionsUser = userManager.addUser("noPermissions", "name", "lastname", "noPermissions@a.com", "Password1_", "salt", false);
         //starting with admin permissions
         roleManager.addRole(sharedEntityManagerUser.getId(), sharedEntityManagerRole);
         roleManager.addRole(sharedEntityViewerUser.getId(), sharedEntityViewerRole);
@@ -115,7 +118,7 @@ public class SharedEntityApiTest implements Service {
      */
     @Test
     @Order(1)
-    public void componentsInsantiatedCorrectly() {
+    void componentsInsantiatedCorrectly() {
         this.sharedEntityApi = this.componentRegistry.findComponent(SharedEntityApi.class, null);
         Assertions.assertNotNull(this.sharedEntityApi);
         Assertions.assertNotNull(this.componentRegistry.findComponent(SharedEntitySystemApi.class, null));
@@ -128,7 +131,7 @@ public class SharedEntityApiTest implements Service {
      */
     @Test
     @Order(2)
-    public void saveOk() {
+    void saveOk() {
         long userId = runtime.getSecurityContext().getLoggedEntityId();
         //creating real entity
         TestEntityResource testEntityResource = new TestEntityResource();
@@ -150,7 +153,7 @@ public class SharedEntityApiTest implements Service {
      */
     @Test
     @Order(3)
-    public void findSharedEntityShouldWork() {
+    void findSharedEntityShouldWork() {
         long userId = runtime.getSecurityContext().getLoggedEntityId();
         for (int i = 2; i < 11; i++) {
             TestEntityResource testEntityResource = new TestEntityResource();
@@ -175,7 +178,7 @@ public class SharedEntityApiTest implements Service {
      */
     @Test
     @Order(4)
-    public void removeShouldWork() {
+    void removeShouldWork() {
         long userId = runtime.getSecurityContext().getLoggedEntityId();
         TestEntityResource testEntityResource = new TestEntityResource();
         testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(userId));
@@ -189,6 +192,14 @@ public class SharedEntityApiTest implements Service {
         this.sharedEntityApi.removeByPK(waterSharedEntity);
         result = this.sharedEntityApi.findByUser(userId);
         Assertions.assertEquals(count - 1, result.size());
+        //removing not existing class entity
+        WaterSharedEntity entity = new WaterSharedEntity("NotExisting.class.name",1,1);
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.removeByPK(entity));
+        //Simulating a user who tries to share a not owned entity
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.removeByPK(u));
+        WaterSharedEntity notExistingUserSharedEntity = createSharedEntity(testEntityResource.getId(), 0);
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.removeByPK(notExistingUserSharedEntity));
     }
 
     /**
@@ -196,7 +207,7 @@ public class SharedEntityApiTest implements Service {
      */
     @Test
     @Order(5)
-    public void saveShouldFailOnDuplicatedEntity() {
+    void saveShouldFailOnDuplicatedEntity() {
         long userId = runtime.getSecurityContext().getLoggedEntityId();
         TestEntityResource testEntityResource = new TestEntityResource();
         testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(userId));
@@ -215,8 +226,8 @@ public class SharedEntityApiTest implements Service {
      */
     @Order(6)
     @Test
-    public void managerCanDoEverything() {
-        TestRuntimeInitializer.getInstance().impersonate(sharedEntityManagerUser,runtime);
+    void managerCanDoEverything() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityManagerUser, runtime);
         long userId = runtime.getSecurityContext().getLoggedEntityId();
         TestEntityResource testEntityResource = new TestEntityResource();
         testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(userId));
@@ -224,13 +235,13 @@ public class SharedEntityApiTest implements Service {
         final WaterSharedEntity entity = createSharedEntity(testEntityResource.getId(), userId);
         //creating with another user
         WaterSharedEntity savedEntity = Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.save(entity));
-        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByPK(savedEntity.getEntityResourceName(),savedEntity.getEntityId(),runtime.getSecurityContext().getLoggedEntityId()));
+        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByPK(savedEntity.getEntityResourceName(), savedEntity.getEntityId(), runtime.getSecurityContext().getLoggedEntityId()));
         Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.removeByPK(savedEntity));
     }
 
     @Order(7)
     @Test
-    public void viewerCannotSaveOrUpdateOrRemove() {
+    void viewerCannotSaveOrUpdateOrRemove() {
         TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
         long userId = runtime.getSecurityContext().getLoggedEntityId();
         TestEntityResource testEntityResource = new TestEntityResource();
@@ -241,7 +252,7 @@ public class SharedEntityApiTest implements Service {
         Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.save(entity));
         //viewer can search
         WaterSharedEntity found = Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findAll(null, -1, -1, null).getResults().stream().findFirst()).get();
-        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByPK(found.getEntityResourceName(),found.getEntityId(),found.getUserId()));
+        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByPK(found.getEntityResourceName(), found.getEntityId(), found.getUserId()));
         //update operation is not supported
         Assertions.assertThrows(UnsupportedOperationException.class, () -> this.sharedEntityApi.update(entity));
         //viewer cannot remove
@@ -250,7 +261,7 @@ public class SharedEntityApiTest implements Service {
 
     @Order(8)
     @Test
-    public void editorCannotRemove() {
+    void editorCannotRemove() {
         TestRuntimeInitializer.getInstance().impersonate(sharedEntityEditorUser, runtime);
         long userId = runtime.getSecurityContext().getLoggedEntityId();
         TestEntityResource testEntityResource = new TestEntityResource();
@@ -261,18 +272,134 @@ public class SharedEntityApiTest implements Service {
         Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.save(entity));
         //viewer can search
         WaterSharedEntity found = Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findAll(null, -1, -1, null).getResults().stream().findFirst()).get();
-        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByPK(found.getEntityResourceName(),found.getEntityId(),found.getUserId()));
+        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByPK(found.getEntityResourceName(), found.getEntityId(), found.getUserId()));
         //update operation is not supported
         Assertions.assertThrows(UnsupportedOperationException.class, () -> this.sharedEntityApi.update(entity));
         //edittor cannot remove
         Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.removeByPK(found));
     }
 
-    //TODO: adding more tests to check resource sharing with specific ids or resource class name
+    @Order(9)
+    @Test
+    void getSharingUsersShouldWork() {
+        long userId = runtime.getSecurityContext().getLoggedEntityId();
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(userId));
+        testEntitySystemApi.save(testEntityResource);
+
+        WaterSharedEntity entity = createSharedEntity(testEntityResource.getId(), userId);
+        this.sharedEntityApi.save(entity);
+
+        List<Long> sharingUsers = this.sharedEntityApi.getSharingUsers(TestEntityResource.class.getName(), testEntityResource.getId());
+        Assertions.assertNotNull(sharingUsers);
+        Assertions.assertFalse(sharingUsers.isEmpty());
+        Assertions.assertTrue(sharingUsers.contains(userId));
+    }
+
+    @Order(10)
+    @Test
+    void getEntityIdsSharedWithUserShouldWork() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long userId = runtime.getSecurityContext().getLoggedEntityId();
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(userId));
+        testEntitySystemApi.save(testEntityResource);
+
+        WaterSharedEntity entity = createSharedEntity(testEntityResource.getId(), sharedEntityViewerUser.getId());
+        this.sharedEntityApi.save(entity);
+
+        List<Long> sharedEntityIds = this.sharedEntityApi.getEntityIdsSharedWithUser(TestEntityResource.class.getName(), sharedEntityViewerUser.getId());
+        Assertions.assertNotNull(sharedEntityIds);
+        Assertions.assertFalse(sharedEntityIds.isEmpty());
+        Assertions.assertTrue(sharedEntityIds.contains(testEntityResource.getId()));
+    }
+
+    @Test
+    @Order(11)
+    void saveOkByEmail() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long userId = runtime.getSecurityContext().getLoggedEntityId();
+        //creating real entity
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(userId));
+        testEntitySystemApi.save(testEntityResource);
+        //sharing it
+        WaterSharedEntity entity = createSharedEntityByUserEmail(testEntityResource.getId(), adminUser.getEmail());
+        entity = this.sharedEntityApi.save(entity);
+        Assertions.assertEquals(1, entity.getEntityVersion());
+        Assertions.assertEquals(TestEntityResource.class.getName(), entity.getEntityResourceName());
+        Assertions.assertEquals(userId, entity.getUserId());
+        Assertions.assertEquals(testEntityResource.getId(), entity.getEntityId());
+    }
+
+    @Test
+    @Order(12)
+    void saveOkByUsername() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long userId = runtime.getSecurityContext().getLoggedEntityId();
+        //creating real entity
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(userId));
+        testEntitySystemApi.save(testEntityResource);
+        //sharing it
+        WaterSharedEntity entity = createSharedEntityByUsername(testEntityResource.getId(), adminUser.getUsername());
+        entity = this.sharedEntityApi.save(entity);
+        Assertions.assertEquals(1, entity.getEntityVersion());
+        Assertions.assertEquals(TestEntityResource.class.getName(), entity.getEntityResourceName());
+        Assertions.assertEquals(userId, entity.getUserId());
+        Assertions.assertEquals(testEntityResource.getId(), entity.getEntityId());
+    }
+
+    @Test
+    @Order(13)
+    void saveKoClassNotFound() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        WaterSharedEntity entity = new WaterSharedEntity("NotExisting.class.name",1,1);
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.save(entity));
+    }
+
+    @Test
+    @Order(14)
+    void saveKoResourceIdNotExists() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        WaterSharedEntity entity = createSharedEntityByUsername(-1,adminUser.getUsername());
+        Assertions.assertThrows(EntityNotFound.class, () -> this.sharedEntityApi.save(entity));
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(runtime.getSecurityContext().getLoggedEntityId()));
+        testEntitySystemApi.save(testEntityResource);
+        WaterSharedEntity existingEntity = createSharedEntityByUsername(testEntityResource.getId(),adminUser.getUsername());
+        //Simulating a user who tries to share a not owned entity
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.save(existingEntity));
+    }
+
+    @Test
+    @Order(15)
+    void saveKoUserDoesNotExist() {
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(runtime.getSecurityContext().getLoggedEntityId()));
+        testEntitySystemApi.save(testEntityResource);
+        WaterSharedEntity existingEntity = createSharedEntity(testEntityResource.getId(),-1);
+        Assertions.assertThrows(EntityNotFound.class, () -> this.sharedEntityApi.save(existingEntity));
+    }
+
 
     private WaterSharedEntity createSharedEntity(long entityId, long userId) {
         WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, userId);
         entity.setUserId(userId);
         return entity;
     }
+
+    private WaterSharedEntity createSharedEntityByUserEmail(long entityId, String email) {
+        WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, 0);
+        entity.setUserEmail(email);
+        return entity;
+    }
+
+    private WaterSharedEntity createSharedEntityByUsername(long entityId, String username) {
+        WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, 0);
+        entity.setUsername(username);
+        return entity;
+    }
+
 }

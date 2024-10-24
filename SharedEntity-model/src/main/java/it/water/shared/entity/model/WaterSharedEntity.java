@@ -2,8 +2,6 @@ package it.water.shared.entity.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import it.water.core.api.entity.shared.SharedEntity;
-import it.water.core.api.model.User;
 import it.water.core.api.permission.ProtectedEntity;
 import it.water.core.api.service.rest.WaterJsonView;
 import it.water.core.permission.action.CrudActions;
@@ -70,11 +68,15 @@ public class WaterSharedEntity extends AbstractJpaEntity implements ProtectedEnt
     private long userId;
     //Entities can be shared using users emails instead of id
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Setter
+    @Getter
     @Transient
     private String userEmail;
     //Entities can be shared using users usernames instead of id
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Transient
+    @Setter
+    @Getter
     private String username;
 
     //removing Id column since it is not required as shared entity as different primary key
