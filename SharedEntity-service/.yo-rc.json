@@ -1,0 +1,9 @@
+{
+    "generator-water": {
+        "inner-project": true,
+        "project-type": "service",
+        "projectName": "SharedEntity",
+        "projectGroupId": "it.water.shared.entity",
+        "projectVersion": "3.0.0"
+    }
+}
