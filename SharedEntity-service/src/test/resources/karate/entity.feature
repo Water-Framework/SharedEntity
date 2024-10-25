@@ -10,7 +10,7 @@ Feature: Check SharedEntity Rest Api Response
     Given url 'http://localhost:8080/water/entities/shared'
     # ---- Add entity fields here -----
     And request 
-    """ { "exampleField": "exampleField"} """
+    """ { "entityResourceName": "it.water.shared.entity.TestEntityResource","entityId":#(testEntityResourceId),"userId":#(userId)} """
     # ---------------------------------
     When method POST
     Then status 200
@@ -19,58 +19,49 @@ Feature: Check SharedEntity Rest Api Response
     """
       { "id": #number,
         "entityVersion":1,
-        "entityCreateDate":'#number',
-        "entityModifyDate":'#number',
-        "exampleField": 'exampleField'
+        "entityCreateDate":#number,
+        "entityModifyDate":#number,
+        "entityResourceName": 'it.water.shared.entity.TestEntityResource',
+        "entityId":#number
        }
     """
     * def entityId = response.id
-    
-    # --------------- UPDATE -----------------------------
+
+  # --------------- FIND By PK-----------------------------
 
     Given header Content-Type = 'application/json'
     And header Accept = 'application/json'
-    Given url 'http://localhost:8080/water/entities/shared'
-    # ---- Add entity fields here -----
-    And request 
-    """ { 
-          "id":"#(entityId)",
-          "entityVersion":1,
-          "exampleField": "exampleFieldUpdated"
-    } 
-    """
-    # ---------------------------------
-    When method PUT
-    Then status 200
-    # ---- Matching required response json ----
-    And match response ==
-    """
-      { "id": #number,
-        "entityVersion":2,
-        "entityCreateDate":'#number',
-        "entityModifyDate":'#number',
-        "exampleField": 'exampleFieldUpdated'
-       }
-    """
-  
-  # --------------- FIND -----------------------------
-
-    Given header Content-Type = 'application/json'
-    And header Accept = 'application/json'
-    Given url 'http://localhost:8080/water/entities/shared/'+entityId
+    Given url 'http://localhost:8080/water/entities/shared/findByPK'
+    And request
+    """ { "entityResourceName": "it.water.shared.entity.TestEntityResource","entityId":#(testEntityResourceId),"userId":#(userId)} """
     # ---------------------------------
     When method GET
     Then status 200
     # ---- Matching required response json ----
     And match response ==
     """
-      { "id": #number,
-        "entityVersion":2,
-        "entityCreateDate":'#number',
-        "entityModifyDate":'#number',
-        "exampleField": 'exampleFieldUpdated'
+       { "id": #number,
+        "entityVersion":1,
+        "entityCreateDate":#number,
+        "entityModifyDate":#number,
+        "entityResourceName": 'it.water.shared.entity.TestEntityResource',
+        "entityId":#number
        }
     """
+
+  # --------------- FIND By Entity-----------------------------
+
+      Given header Content-Type = 'application/json'
+      And header Accept = 'application/json'
+      Given url 'http://localhost:8080/water/entities/shared/findByEntity?entityResourceName=it.water.shared.entity.TestEntityResource&entityId='+entityId
+      # ---------------------------------
+      When method GET
+      Then status 200
+      # ---- Matching required response json ----
+      And match response ==
+      """
+         []
+      """
     
   # --------------- FIND ALL -----------------------------
 
@@ -87,22 +78,24 @@ Feature: Check SharedEntity Rest Api Response
         "nextPage":1,
         "delta":20,
         "results":[
-          {
-            "id": #number,
-            "entityVersion":2,
-            "entityCreateDate":'#number',
-            "entityModifyDate":'#number',
-            "exampleField": 'exampleFieldUpdated'
-          }
+            { "id": #number,
+                    "entityVersion":1,
+                    "entityCreateDate":#number,
+                    "entityModifyDate":#number,
+                    "entityResourceName": 'it.water.shared.entity.TestEntityResource',
+                    "entityId":#number
+              }
         ]
       }
     """
   
-  # --------------- DELETE -----------------------------
+  # --------------- DELETE BY PK-----------------------------
 
     Given header Content-Type = 'application/json'
     And header Accept = 'application/json'
-    Given url 'http://localhost:8080/water/entities/shared/'+entityId
+    Given url 'http://localhost:8080/water/entities/shared/'
+    And request
+    """ { "entityResourceName": "it.water.shared.entity.TestEntityResource","entityId":#(testEntityResourceId),"userId":#(userId)} """
     When method DELETE
     # 204 because delete response is empty, so the status code is "no content" but is ok
     Then status 204

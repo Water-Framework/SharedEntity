@@ -16,7 +16,6 @@
 
 package it.water.shared.entity;
 
-import it.water.core.api.entity.owned.OwnedResource;
 import it.water.core.api.entity.shared.SharedEntity;
 import it.water.core.api.model.BaseEntity;
 import it.water.core.api.model.User;

@@ -80,7 +80,6 @@ class SharedEntityApiTest implements Service {
     private it.water.core.api.model.User sharedEntityManagerUser;
     private it.water.core.api.model.User sharedEntityViewerUser;
     private it.water.core.api.model.User sharedEntityEditorUser;
-    private it.water.core.api.model.User noPermissionsUser;
 
     private Role sharedEntityManagerRole;
     private Role sharedEntityViewerRole;
@@ -100,7 +99,6 @@ class SharedEntityApiTest implements Service {
         sharedEntityManagerUser = userManager.addUser("manager", "name", "lastname", "manager@a.com", "Password1_", "salt", false);
         sharedEntityViewerUser = userManager.addUser("viewer", "name", "lastname", "viewer@a.com", "Password1_", "salt", false);
         sharedEntityEditorUser = userManager.addUser("editor", "name", "lastname", "editor@a.com", "Password1_", "salt", false);
-        noPermissionsUser = userManager.addUser("noPermissions", "name", "lastname", "noPermissions@a.com", "Password1_", "salt", false);
         //starting with admin permissions
         roleManager.addRole(sharedEntityManagerUser.getId(), sharedEntityManagerRole);
         roleManager.addRole(sharedEntityViewerUser.getId(), sharedEntityViewerRole);

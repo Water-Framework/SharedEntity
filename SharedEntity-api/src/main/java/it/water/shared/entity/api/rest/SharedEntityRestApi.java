@@ -11,7 +11,6 @@ import it.water.shared.entity.model.WaterSharedEntity;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Set;
 
@@ -73,22 +72,6 @@ public interface SharedEntityRestApi extends RestApi {
     PaginableResult<WaterSharedEntity> findAll();
 
     @LoggedIn
-    @Path("/{id}")
-    @DELETE
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    @JsonView(WaterJsonView.Public.class)
-    @ApiOperation(value = "/{id}", notes = "SharedEntity Delete API", httpMethod = "DELETE", produces = MediaType.APPLICATION_JSON)
-    @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "Successful operation"),
-            @ApiResponse(code = 401, message = "Not authorized"),
-            @ApiResponse(code = 409, message = "Validation Failed"),
-            @ApiResponse(code = 422, message = "Duplicated Entity"),
-            @ApiResponse(code = 500, message = "Internal server error")
-    })
-    void remove(@PathParam("id") long id);
-
-    @LoggedIn
     @DELETE
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "/", notes = "Service for deleting a shared entity entity", httpMethod = "DELETE", consumes = "application/json")
@@ -148,5 +131,5 @@ public interface SharedEntityRestApi extends RestApi {
             @ApiResponse(code = 500, message = "Entity not found")})
     @JsonView(WaterJsonView.Public.class)
     Set<Long> getUsers(@QueryParam("entityResourceName") String entityResourceName,
-                         @QueryParam("entityId") long entityId);
+                       @QueryParam("entityId") long entityId);
 }
