@@ -32,6 +32,7 @@ dependencies {
 	implementation group:'org.hsqldb', name:'hsqldb', version:'2.4.1'
 
 	testImplementation group:'it.water.core',name:'Core-testing-utils',version:project.waterVersion
+	testImplementation 'org.hibernate:hibernate-core:'+project.hibernateVersion
 	testImplementation 'org.springframework.boot:spring-boot-starter-test:' + project.springBootVersion
 	testImplementation 'org.springframework.boot:spring-boot-starter-web:' + project.springBootVersion
 	testAnnotationProcessor 'org.projectlombok:lombok:'+project.lombokVersion
