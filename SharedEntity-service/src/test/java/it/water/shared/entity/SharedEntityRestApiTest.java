@@ -8,6 +8,7 @@ import it.water.core.api.service.Service;
 import it.water.core.api.service.integration.UserIntegrationClient;
 import it.water.core.api.user.UserManager;
 import it.water.core.interceptors.annotations.Inject;
+import it.water.core.testing.utils.bundle.TestRuntimeInitializer;
 import it.water.core.testing.utils.junit.WaterTestExtension;
 import it.water.core.testing.utils.runtime.TestRuntimeUtils;
 import lombok.Setter;
@@ -52,6 +53,9 @@ public class SharedEntityRestApiTest implements Service {
     @Karate.Test
     Karate restInterfaceTest() {
         return Karate.run("classpath:karate")
+                .systemProperty("webServerPort", TestRuntimeInitializer.getInstance().getRestServerPort())
+                .systemProperty("host", "localhost")
+                .systemProperty("protocol", "http")
                 .systemProperty("testEntityResourceId", String.valueOf(testEntityResource.getId()))
                 .systemProperty("userId", String.valueOf(runtime.getSecurityContext().getLoggedEntityId()));
 

@@ -1,19 +1,14 @@
 
 package it.water.shared.entity.service.rest;
 
-import it.water.shared.entity.api.*;
-import it.water.shared.entity.api.rest.*;
-import it.water.shared.entity.model.*;
-
 import it.water.core.api.service.BaseEntityApi;
 import it.water.core.api.service.rest.FrameworkRestController;
-import it.water.core.interceptors.annotations.*;
+import it.water.core.interceptors.annotations.Inject;
 import it.water.service.rest.persistence.BaseEntityRestApi;
-
-import lombok.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import it.water.shared.entity.api.SharedEntityApi;
+import it.water.shared.entity.api.rest.SharedEntityRestApi;
+import it.water.shared.entity.model.WaterSharedEntity;
+import lombok.Setter;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -26,7 +21,6 @@ import java.util.Set;
  */
 @FrameworkRestController(referredRestApi = SharedEntityRestApi.class)
 public class SharedEntityRestControllerImpl extends BaseEntityRestApi<WaterSharedEntity> implements SharedEntityRestApi {
-    private static Logger log = LoggerFactory.getLogger(SharedEntityRestControllerImpl.class.getName());
 
     @Inject
     @Setter

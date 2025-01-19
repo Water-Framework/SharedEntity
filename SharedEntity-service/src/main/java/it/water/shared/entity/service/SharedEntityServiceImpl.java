@@ -58,10 +58,6 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
 
     @Inject
     @Setter
-    private Runtime runtime;
-
-    @Inject
-    @Setter
     private PermissionManager permissionManager;
 
     public SharedEntityServiceImpl() {
@@ -114,13 +110,13 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
 
         User user;
         try {
-            user = this.userIntegrationClient.fetchUserByUserId(runtime.getSecurityContext().getLoggedEntityId());
+            user = this.userIntegrationClient.fetchUserByUserId(this.getRuntime().getSecurityContext().getLoggedEntityId());
         } catch (NoResultException exception) {
             throw new UnauthorizedException();
         }
         //Custom check on permission system
         //check if the user has the share permission for the entity identified by entityResourceName
-        if ((!user.isAdmin() && (actionsManager.getActions().get(entityClass.getName()) == null || !permissionManager.checkPermission(runtime.getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))))) {
+        if ((!user.isAdmin() && (actionsManager.getActions().get(entityClass.getName()) == null || !permissionManager.checkPermission(getRuntime().getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))))) {
             throw new UnauthorizedException();
         }
 
@@ -141,7 +137,7 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
     private WaterSharedEntity doSave(WaterSharedEntity entity, SharedEntity e) {
         //check if the user owner of the entity is the logged one
         User u = e.getUserOwner();
-        if (u.getId() != runtime.getSecurityContext().getLoggedEntityId()) {
+        if (u.getId() != this.getRuntime().getSecurityContext().getLoggedEntityId()) {
             throw new UnauthorizedException();
         }
         //If user id is not specified we try to load user by email field or username.
@@ -185,7 +181,7 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
             throw new UnauthorizedException("Entity is not a Shared Entity or Shared Entity Class not found!");
 
         //check if the user has the share permission for the entity identified by entityResourceName
-        if (!permissionManager.checkPermission(runtime.getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))) {
+        if (!permissionManager.checkPermission(this.getRuntime().getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))) {
             throw new UnauthorizedException();
         } else {
             //get the system service of the entity identified by entityResourceName
@@ -201,7 +197,7 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
 
             //check if the user owner of the entity is the logged one
             User u = e.getUserOwner();
-            if (u.getId() != runtime.getSecurityContext().getLoggedEntityId()) {
+            if (u.getId() != this.getRuntime().getSecurityContext().getLoggedEntityId()) {
                 throw new UnauthorizedException();
             }
         }

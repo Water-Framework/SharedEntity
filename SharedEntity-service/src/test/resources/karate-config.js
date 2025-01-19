@@ -17,8 +17,13 @@
 function fn() {
     let testEntityResourceId = karate.properties['testEntityResourceId'];
     let userId = karate.properties['userId'];
+    let webServerPort = karate.properties['webServerPort'];
+    let host = karate.properties['host'];
+    let protocol = karate.properties['protocol'];
+    let serviceBaseUrl = protocol+"://"+host+":"+webServerPort;
     return {
         "testEntityResourceId": testEntityResourceId,
-        "userId": userId
+        "userId": userId,
+        "serviceBaseUrl": serviceBaseUrl
     }
 }

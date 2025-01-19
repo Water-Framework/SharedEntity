@@ -9,7 +9,6 @@ import it.water.shared.entity.service.rest.SharedEntityRestControllerImpl;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collection;
-import java.util.Set;
 
 
 /**
@@ -22,21 +21,6 @@ public class SharedEntitySpringRestControllerImpl extends SharedEntityRestContro
     @Override
     public WaterSharedEntity save(WaterSharedEntity entity) {
         return super.save(entity);
-    }
-
-    @Override
-    public WaterSharedEntity update(WaterSharedEntity entity) {
-        return super.update(entity);
-    }
-
-    @Override
-    public void remove(long id) {
-        super.remove(id);
-    }
-
-    @Override
-    public WaterSharedEntity find(long id) {
-        return super.find(id);
     }
 
     @Override
@@ -64,13 +48,4 @@ public class SharedEntitySpringRestControllerImpl extends SharedEntityRestContro
         return super.findByEntity(entityResourceName, entityId);
     }
 
-    @Override
-    public Collection<WaterSharedEntity> findByUser(long userId) {
-        return super.findByUser(userId);
-    }
-
-    @Override
-    public Set<Long> getUsers(String entityResourceName, long entityId) {
-        return super.getUsers(entityResourceName, entityId);
-    }
 }

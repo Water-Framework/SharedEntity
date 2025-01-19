@@ -4,19 +4,24 @@ import com.intuit.karate.junit5.Karate;
 import it.water.core.api.bundle.Runtime;
 import it.water.core.api.registry.ComponentRegistry;
 import it.water.core.api.service.integration.UserIntegrationClient;
+import it.water.core.testing.utils.bundle.TestRuntimeInitializer;
 import it.water.core.testing.utils.runtime.TestRuntimeUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest(classes = SharedEntityApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
         "water.rest.security.jwt.validate=false",
         "water.testMode=true"
 })
 public class SharedEntityRestSpringApiTest {
+
+    @LocalServerPort
+    private int serverPort;
 
     @Autowired
     private ComponentRegistry componentRegistry;
@@ -48,6 +53,9 @@ public class SharedEntityRestSpringApiTest {
     @Karate.Test
     Karate restInterfaceTest() {
         return Karate.run("../SharedEntity-service/src/test/resources/karate")
+                .systemProperty("webServerPort", String.valueOf(serverPort))
+                .systemProperty("host", "localhost")
+                .systemProperty("protocol", "http")
                 .systemProperty("testEntityResourceId", String.valueOf(testEntityResource.getId()))
                 .systemProperty("userId", String.valueOf(runtime.getSecurityContext().getLoggedEntityId()));
     }

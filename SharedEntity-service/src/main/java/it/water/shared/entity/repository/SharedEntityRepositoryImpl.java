@@ -21,6 +21,9 @@ import java.util.stream.Collectors;
 public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterSharedEntity> implements SharedEntityRepository {
     private static Logger log = LoggerFactory.getLogger(SharedEntityRepositoryImpl.class);
     private static final String SHAREDENTITY_PERSISTENCE_UNIT = "sharedentity-persistence-unit";
+    private static final String ENTITY_RESOURCE_NAME_FIELD = "entityResourceName";
+    private static final String USER_ID_FIELD = "userId";
+    private static final String ENTITY_ID_FIELD = "entityId";
 
     public SharedEntityRepositoryImpl() {
         super(WaterSharedEntity.class, SHAREDENTITY_PERSISTENCE_UNIT);
@@ -37,9 +40,9 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
 
     @Override
     public WaterSharedEntity findByPK(String entityResourceName, long entityId, long userId) {
-        Query findByResourceName = this.getQueryBuilderInstance().field("entityResourceName").equalTo(entityResourceName);
-        Query findByEntityId = this.getQueryBuilderInstance().field("entityId").equalTo(entityId);
-        Query findByUserId = this.getQueryBuilderInstance().field("userId").equalTo(userId);
+        Query findByResourceName = this.getQueryBuilderInstance().field(ENTITY_RESOURCE_NAME_FIELD).equalTo(entityResourceName);
+        Query findByEntityId = this.getQueryBuilderInstance().field(ENTITY_ID_FIELD).equalTo(entityId);
+        Query findByUserId = this.getQueryBuilderInstance().field(USER_ID_FIELD).equalTo(userId);
         try {
             return find(findByResourceName.and(findByEntityId).and(findByUserId));
         } catch (NoResultException | jakarta.persistence.NoResultException e) {
@@ -51,8 +54,8 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
     @Override
     public List<WaterSharedEntity> findByEntity(String entityResourceName, long entityId) {
         log.debug("Repository Find entities {} with entityResourceName {} and entityId {}", this.getType().getSimpleName(), entityResourceName, entityId);
-        Query findByResourceName = this.getQueryBuilderInstance().field("entityResourceName").equalTo(entityResourceName);
-        Query findByEntityId = this.getQueryBuilderInstance().field("entityId").equalTo(entityId);
+        Query findByResourceName = this.getQueryBuilderInstance().field(ENTITY_RESOURCE_NAME_FIELD).equalTo(entityResourceName);
+        Query findByEntityId = this.getQueryBuilderInstance().field(ENTITY_ID_FIELD).equalTo(entityId);
         try {
             PaginableResult<WaterSharedEntity> results = findAll(-1, -1, findByResourceName.and(findByEntityId), null);
             return new ArrayList<>(results.getResults());
@@ -65,7 +68,7 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
     @Override
     public List<WaterSharedEntity> findByUser(long userId) {
         log.debug("Repository Find entities {} ", this.getType().getSimpleName());
-        Query findByUserId = this.getQueryBuilderInstance().field("userId").equalTo(userId);
+        Query findByUserId = this.getQueryBuilderInstance().field(USER_ID_FIELD).equalTo(userId);
         try {
             PaginableResult<WaterSharedEntity> results = findAll(-1, -1, findByUserId, null);
             return new ArrayList<>(results.getResults());
@@ -78,8 +81,8 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
     @Override
     public List<Long> getSharingUsers(String entityResourceName, long entityId) {
         log.debug("Repository invoke getSharingUsers with type: {} and entityResourceName {} and entityId {}", this.getType().getSimpleName(), entityResourceName, entityId);
-        Query entityIdQ = this.getQueryBuilderInstance().field("entityId").equalTo(entityId);
-        Query resourceNameQ = this.getQueryBuilderInstance().field("entityResourceName").equalTo(entityResourceName);
+        Query entityIdQ = this.getQueryBuilderInstance().field(ENTITY_ID_FIELD).equalTo(entityId);
+        Query resourceNameQ = this.getQueryBuilderInstance().field(ENTITY_RESOURCE_NAME_FIELD).equalTo(entityResourceName);
         Collection<WaterSharedEntity> results = this.findAll(-1, -1, entityIdQ.and(resourceNameQ), null).getResults();
         Set<Long> userIds = results.stream().map(WaterSharedEntity::getUserId).collect(Collectors.toSet());
         return new ArrayList<>(userIds);
@@ -88,8 +91,8 @@ public class SharedEntityRepositoryImpl extends WaterJpaRepositoryImpl<WaterShar
     @Override
     public List<Long> getEntityIdsSharedWithUser(String entityResourceName, long userId) {
         log.debug("Repository invoke getSharingUsers with entityResourceName {} and userId {}", this.getType().getSimpleName(), userId);
-        Query entityIdQ = this.getQueryBuilderInstance().field("userId").equalTo(userId);
-        Query resourceNameQ = this.getQueryBuilderInstance().field("entityResourceName").equalTo(entityResourceName);
+        Query entityIdQ = this.getQueryBuilderInstance().field(USER_ID_FIELD).equalTo(userId);
+        Query resourceNameQ = this.getQueryBuilderInstance().field(ENTITY_RESOURCE_NAME_FIELD).equalTo(entityResourceName);
         Collection<WaterSharedEntity> results = this.findAll(-1, -1, entityIdQ.and(resourceNameQ), null).getResults();
         Set<Long> entityIds = results.stream().map(WaterSharedEntity::getEntityId).collect(Collectors.toSet());
         return new ArrayList<>(entityIds);

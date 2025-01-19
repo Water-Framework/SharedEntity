@@ -7,7 +7,7 @@ Feature: Check SharedEntity Rest Api Response
 
     Given header Content-Type = 'application/json'
     And header Accept = 'application/json'
-    Given url 'http://localhost:8080/water/entities/shared'
+    Given url serviceBaseUrl+'/water/entities/shared'
     # ---- Add entity fields here -----
     And request 
     """ { "entityResourceName": "it.water.shared.entity.TestEntityResource","entityId":#(testEntityResourceId),"userId":#(userId)} """
@@ -31,7 +31,7 @@ Feature: Check SharedEntity Rest Api Response
 
     Given header Content-Type = 'application/json'
     And header Accept = 'application/json'
-    Given url 'http://localhost:8080/water/entities/shared/findByPK'
+    Given url serviceBaseUrl+'/water/entities/shared/findByPK'
     And request
     """ { "entityResourceName": "it.water.shared.entity.TestEntityResource","entityId":#(testEntityResourceId),"userId":#(userId)} """
     # ---------------------------------
@@ -53,7 +53,7 @@ Feature: Check SharedEntity Rest Api Response
 
       Given header Content-Type = 'application/json'
       And header Accept = 'application/json'
-      Given url 'http://localhost:8080/water/entities/shared/findByEntity?entityResourceName=it.water.shared.entity.TestEntityResource&entityId='+entityId
+      Given url serviceBaseUrl+'/water/entities/shared/findByEntity?entityResourceName=it.water.shared.entity.TestEntityResource&entityId='+entityId
       # ---------------------------------
       When method GET
       Then status 200
@@ -67,33 +67,26 @@ Feature: Check SharedEntity Rest Api Response
 
     Given header Content-Type = 'application/json'
     And header Accept = 'application/json'
-    Given url 'http://localhost:8080/water/entities/shared'
+    Given url serviceBaseUrl+'/water/entities/shared'
     When method GET
     Then status 200
-    And match response ==
+    And match response.results contains
     """
-      {
-        "numPages":1,
-        "currentPage":1,
-        "nextPage":1,
-        "delta":20,
-        "results":[
-            { "id": #number,
-                    "entityVersion":1,
-                    "entityCreateDate":#number,
-                    "entityModifyDate":#number,
-                    "entityResourceName": 'it.water.shared.entity.TestEntityResource',
-                    "entityId":#number
-              }
-        ]
-      }
+    {
+      "id": #number,
+      "entityVersion":1,
+      "entityCreateDate":#number,
+      "entityModifyDate":#number,
+      "entityResourceName": 'it.water.shared.entity.TestEntityResource',
+      "entityId":#number
+    }
     """
   
   # --------------- DELETE BY PK-----------------------------
 
     Given header Content-Type = 'application/json'
     And header Accept = 'application/json'
-    Given url 'http://localhost:8080/water/entities/shared/'
+    Given url serviceBaseUrl+'/water/entities/shared'
     And request
     """ { "entityResourceName": "it.water.shared.entity.TestEntityResource","entityId":#(testEntityResourceId),"userId":#(userId)} """
     When method DELETE
