@@ -25,6 +25,4 @@ Import-Package: \
 Export-Package: \
     it.water.shared.entity.*
 DynamicImport-Package: *
-Meta-Persistence: META-INF/persistence.xml
 -cdiannotations: *;discover=annotated_by_bean
--fixupmessages "Classes found in the wrong directory"; restrict:=error; is:=warning
