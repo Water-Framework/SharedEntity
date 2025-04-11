@@ -136,8 +136,8 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
 
     private WaterSharedEntity doSave(WaterSharedEntity entity, SharedEntity e) {
         //check if the user owner of the entity is the logged one
-        User u = e.getUserOwner();
-        if (u.getId() != this.getRuntime().getSecurityContext().getLoggedEntityId()) {
+        long ownerUserId = e.getOwnerUserId() != null ? e.getOwnerUserId() : 0;
+        if (ownerUserId != this.getRuntime().getSecurityContext().getLoggedEntityId()) {
             throw new UnauthorizedException();
         }
         //If user id is not specified we try to load user by email field or username.
@@ -196,8 +196,8 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
             }
 
             //check if the user owner of the entity is the logged one
-            User u = e.getUserOwner();
-            if (u.getId() != this.getRuntime().getSecurityContext().getLoggedEntityId()) {
+            long userId = e.getOwnerUserId() != null ? e.getOwnerUserId(): 0L;
+            if (userId != this.getRuntime().getSecurityContext().getLoggedEntityId()) {
                 throw new UnauthorizedException();
             }
         }
