@@ -1,5 +1,6 @@
 {
   "generator-water": {
+    "hasSonarqubeIntegration": true,
     "applicationTypeEntity": true,
     "applicationType": "entity",
     "projectSuffix": "sharedEntity",
