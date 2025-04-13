@@ -46,7 +46,7 @@ public class SharedEntityRestApiTest implements Service {
         testEntityResource = new TestEntityResource();
         testEntityResource.setEntityVersion(1);
         testEntityResource.setId(1);
-        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(runtime.getSecurityContext().getLoggedEntityId()));
+        testEntityResource.setOwnerUserId(userIntegrationClient.fetchUserByUserId(runtime.getSecurityContext().getLoggedEntityId()).getId());
         testEntitySystemApi.save(testEntityResource);
     }
 
