@@ -4,7 +4,6 @@ import com.intuit.karate.junit5.Karate;
 import it.water.core.api.bundle.Runtime;
 import it.water.core.api.registry.ComponentRegistry;
 import it.water.core.api.service.integration.UserIntegrationClient;
-import it.water.core.testing.utils.bundle.TestRuntimeInitializer;
 import it.water.core.testing.utils.runtime.TestRuntimeUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +45,7 @@ public class SharedEntityRestSpringApiTest {
         testEntityResource = new TestEntityResource();
         testEntityResource.setEntityVersion(1);
         testEntityResource.setId(1);
-        testEntityResource.setUserOwner(userIntegrationClient.fetchUserByUserId(runtime.getSecurityContext().getLoggedEntityId()));
+        testEntityResource.setOwnerUserId(userIntegrationClient.fetchUserByUserId(runtime.getSecurityContext().getLoggedEntityId()).getId());
         testEntitySystemApi.save(testEntityResource);
     }
 

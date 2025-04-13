@@ -48,21 +48,20 @@ public class TestEntityResource implements BaseEntity, SharedEntity {
     @Setter
     private long id;
 
-    private User owner;
+    private Long ownerUserId;
 
     public TestEntityResource() {
         id = localCounter++;
     }
 
     @Override
-    @Transient
-    public User getUserOwner() {
-        return owner;
+    public Long getOwnerUserId() {
+        return ownerUserId;
     }
 
     @Override
-    public void setUserOwner(User user) {
-        this.owner = user;
+    public void setOwnerUserId(Long aLong) {
+        this.ownerUserId = aLong;
     }
 
     @Override
