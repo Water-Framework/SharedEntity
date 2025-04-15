@@ -6,6 +6,7 @@ import it.water.core.api.permission.PermissionManager;
 import it.water.core.api.registry.ComponentRegistry;
 import it.water.core.api.role.RoleManager;
 import it.water.core.api.service.Service;
+import it.water.core.api.service.integration.SharedEntityIntegrationClient;
 import it.water.core.api.service.integration.UserIntegrationClient;
 import it.water.core.api.user.UserManager;
 import it.water.core.interceptors.annotations.Inject;
@@ -51,6 +52,10 @@ class SharedEntityApiTest implements Service {
     @Inject
     @Setter
     private SharedEntityRepository sharedEntityRepository;
+
+    @Inject
+    @Setter
+    private SharedEntityIntegrationClient sharedEntityIntegrationClient;
 
     @Inject
     @Setter
@@ -136,12 +141,14 @@ class SharedEntityApiTest implements Service {
         testEntityResource.setOwnerUserId(userIntegrationClient.fetchUserByUserId(userId).getId());
         testEntitySystemApi.save(testEntityResource);
         //sharing it
-        WaterSharedEntity entity = createSharedEntity(testEntityResource.getId(), userId);
+        WaterSharedEntity entity = createSharedEntity(testEntityResource.getId(),sharedEntityEditorUser.getId());
         entity = this.sharedEntityApi.save(entity);
+        Assertions.assertEquals(userId,testEntityResource.getOwnerUserId());
         Assertions.assertEquals(1, entity.getEntityVersion());
         Assertions.assertEquals(TestEntityResource.class.getName(), entity.getEntityResourceName());
-        Assertions.assertEquals(userId, entity.getUserId());
+        Assertions.assertEquals(sharedEntityEditorUser.getId(), entity.getUserId());
         Assertions.assertEquals(testEntityResource.getId(), entity.getEntityId());
+        Assertions.assertTrue(this.sharedEntityIntegrationClient.fetchSharingUsersIds(TestEntityResource.class.getName(), sharedEntityEditorUser.getId()).contains(testEntityResource.getId()));
     }
 
 

@@ -108,18 +108,16 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
             throw new UnauthorizedException("Entity is not a Shared Entity or Shared Entity Class not found!");
         }
 
-        User user;
-        try {
-            user = this.userIntegrationClient.fetchUserByUserId(this.getRuntime().getSecurityContext().getLoggedEntityId());
-        } catch (NoResultException exception) {
-            throw new UnauthorizedException();
-        }
+        User user = this.userIntegrationClient.fetchUserByUserId(this.getRuntime().getSecurityContext().getLoggedEntityId());
+
         //Custom check on permission system
         //check if the user has the share permission for the entity identified by entityResourceName
-        if ((!user.isAdmin() && (actionsManager.getActions().get(entityClass.getName()) == null || !permissionManager.checkPermission(getRuntime().getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))))) {
+        if (user == null || (!user.isAdmin() && (actionsManager.getActions().get(entityClass.getName()) == null || !permissionManager.checkPermission(getRuntime().getSecurityContext().getLoggedUsername(), entity.getEntityResourceName(), actionsManager.getActions().get(entityClass.getName()).getAction(ShareAction.SHARE))))) {
             throw new UnauthorizedException();
         }
-
+        //todo this logic implies that shared entity should stay in the same container
+        //we have to move this logic to the permission system that should track wether an entity
+        //is owned, shared and save this information inside the database
         BaseEntitySystemApi<? extends WaterSharedEntity> entitySystemService = this.componentRegistry.findEntitySystemApi(entity.getEntityResourceName());
         Resource resource;
         try {
@@ -130,16 +128,11 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
         if (!permissionManager.checkUserOwnsResource(user, resource)) {
             throw new UnauthorizedException();
         }
-        return doSave(entity, (SharedEntity) resource);
+        return doSave(entity);
     }
 
 
-    private WaterSharedEntity doSave(WaterSharedEntity entity, SharedEntity e) {
-        //check if the user owner of the entity is the logged one
-        long ownerUserId = e.getOwnerUserId() != null ? e.getOwnerUserId() : 0;
-        if (ownerUserId != this.getRuntime().getSecurityContext().getLoggedEntityId()) {
-            throw new UnauthorizedException();
-        }
+    private WaterSharedEntity doSave(WaterSharedEntity entity) {
         //If user id is not specified we try to load user by email field or username.
         //if id nor  username nor  email are specified the service will raise an exception
         setSharedEntityUserId(entity);
