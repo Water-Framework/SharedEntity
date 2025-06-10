@@ -16,9 +16,10 @@
 
 package it.water.shared.entity;
 
+import java.util.Date;
+
 import it.water.core.api.entity.shared.SharedEntity;
 import it.water.core.api.model.BaseEntity;
-import it.water.core.api.model.User;
 import it.water.core.permission.action.CrudActions;
 import it.water.core.permission.action.ShareAction;
 import it.water.core.permission.annotations.AccessControl;
@@ -30,9 +31,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Transient;
 import lombok.Setter;
 
-import java.util.Date;
 
-
+@SuppressWarnings("unused")
 @Entity
 @AccessControl(availableActions = {ShareAction.SHARE, CrudActions.UPDATE, CrudActions.FIND, CrudActions.FIND_ALL, CrudActions.REMOVE}, rolesPermissions = {
         //Admin role can do everything

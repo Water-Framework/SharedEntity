@@ -30,7 +30,7 @@ import lombok.*;
 @Getter
 @Setter(AccessLevel.PROTECTED)
 @ToString
-@EqualsAndHashCode(of = {"entityResourceName", "entityId", "userId"})
+@EqualsAndHashCode(of = {"entityResourceName", "entityId", "userId"},callSuper = true)
 //Actions and default roles access
 @AccessControl(availableActions = {CrudActions.SAVE, CrudActions.UPDATE, CrudActions.FIND, CrudActions.FIND_ALL, CrudActions.REMOVE},
         rolesPermissions = {
@@ -58,14 +58,14 @@ public class WaterSharedEntity extends AbstractJpaEntity implements ProtectedEnt
     @NotNullOnPersist
     @NonNull
     @JsonView(WaterJsonView.Public.class)
-    private long entityId;
+    private Long entityId;
     @Id
     @NotNullOnPersist
     @NonNull
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @JsonView(WaterJsonView.Public.class)
     @Setter(AccessLevel.PUBLIC)
-    private long userId;
+    private Long userId;
     //Entities can be shared using users emails instead of id
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Setter

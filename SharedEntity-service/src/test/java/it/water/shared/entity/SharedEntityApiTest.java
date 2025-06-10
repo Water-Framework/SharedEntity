@@ -200,7 +200,7 @@ class SharedEntityApiTest implements Service {
         result = this.sharedEntityApi.findByUser(userId);
         Assertions.assertEquals(count - 1, result.size());
         //removing not existing class entity
-        WaterSharedEntity entity = new WaterSharedEntity("NotExisting.class.name", 1, 1);
+        WaterSharedEntity entity = new WaterSharedEntity("NotExisting.class.name", (long)1, (long)1);
         long entityId = entity.getId();
         Assertions.assertThrows(UnsupportedOperationException.class, () -> this.sharedEntityApi.remove(entityId));
         Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.removeByPK(entity));
@@ -363,7 +363,7 @@ class SharedEntityApiTest implements Service {
     @Order(13)
     void saveKoClassNotFound() {
         TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
-        WaterSharedEntity entity = new WaterSharedEntity("NotExisting.class.name", 1, 1);
+        WaterSharedEntity entity = new WaterSharedEntity("NotExisting.class.name", 1l, 1l);
         Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.save(entity));
     }
 
@@ -400,13 +400,13 @@ class SharedEntityApiTest implements Service {
     }
 
     private WaterSharedEntity createSharedEntityByUserEmail(long entityId, String email) {
-        WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, 0);
+        WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, 0l);
         entity.setUserEmail(email);
         return entity;
     }
 
     private WaterSharedEntity createSharedEntityByUsername(long entityId, String username) {
-        WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, 0);
+        WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, 0l);
         entity.setUsername(username);
         return entity;
     }

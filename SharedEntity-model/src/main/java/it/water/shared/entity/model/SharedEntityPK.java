@@ -31,7 +31,7 @@ public class SharedEntityPK implements Serializable {
     @NonNull
     private String entityResourceName;
     @NonNull
-    private long entityId;
+    private Long entityId;
     @NonNull
-    private long userId;
+    private Long userId;
 }

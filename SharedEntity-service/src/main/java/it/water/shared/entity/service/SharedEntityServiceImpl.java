@@ -1,8 +1,8 @@
 package it.water.shared.entity.service;
 
+import java.util.List;
+
 import it.water.core.api.action.ActionsManager;
-import it.water.core.api.bundle.Runtime;
-import it.water.core.api.entity.owned.OwnedResource;
 import it.water.core.api.entity.shared.SharedEntity;
 import it.water.core.api.model.Resource;
 import it.water.core.api.model.User;
@@ -27,8 +27,6 @@ import it.water.shared.entity.api.SharedEntitySystemApi;
 import it.water.shared.entity.model.WaterSharedEntity;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.List;
 
 
 /**
@@ -164,6 +162,7 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
      * @param entity The shared entity to be removed, which includes the entity resource name,
      *               entity ID, and user ID.
      */
+    @SuppressWarnings("unchecked")
     @Override
     @AllowGenericPermissions(actions = CrudActions.REMOVE)
     public void removeByPK(WaterSharedEntity entity) {
