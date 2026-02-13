@@ -22,7 +22,9 @@ Feature: Check SharedEntity Rest Api Response
         "entityCreateDate":#number,
         "entityModifyDate":#number,
         "entityResourceName": 'it.water.shared.entity.TestEntityResource',
-        "entityId":#number
+        "entityId":#number,
+        "categoryIds": #null,
+        "tagIds": #null
        }
     """
     * def entityId = response.id
@@ -45,7 +47,9 @@ Feature: Check SharedEntity Rest Api Response
         "entityCreateDate":#number,
         "entityModifyDate":#number,
         "entityResourceName": 'it.water.shared.entity.TestEntityResource',
-        "entityId":#number
+        "entityId":#number,
+        "categoryIds": #null,
+        "tagIds": #null
        }
     """
 
@@ -78,10 +82,12 @@ Feature: Check SharedEntity Rest Api Response
       "entityCreateDate":#number,
       "entityModifyDate":#number,
       "entityResourceName": 'it.water.shared.entity.TestEntityResource',
-      "entityId":#number
+      "entityId":#number,
+      "categoryIds": #null,
+      "tagIds": #null
     }
     """
-  
+
   # --------------- DELETE BY PK-----------------------------
 
     Given header Content-Type = 'application/json'
