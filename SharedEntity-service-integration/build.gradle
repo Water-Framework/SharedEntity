@@ -82,3 +82,17 @@ publishing {
         	}
     }
  }
+
+waterDescriptor {
+    moduleId    = 'it.water.sharedentity.integration'
+    displayName = 'Shared Entity Service Integration Client'
+    description = 'Remote REST integration client for shared entity ownership checks across Water Framework microservices'
+
+    output {
+        pin('it.water.integration.shared-entity') {}
+    }
+
+    input {
+        standardPin 'service-discovery'
+    }
+}

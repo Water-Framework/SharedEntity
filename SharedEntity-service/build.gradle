@@ -88,3 +88,14 @@ publishing {
         	}
     }
  }
+
+waterDescriptor {
+    moduleId    = 'it.water.sharedentity'
+    displayName = 'Shared Entity Service'
+    description = 'Multi-tenancy shared entity ownership and sharing management for Water Framework'
+
+    input {
+        standardPin 'jdbc'
+        standardPin 'service-discovery'
+    }
+}

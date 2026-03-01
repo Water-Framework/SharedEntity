@@ -62,4 +62,10 @@ publishing {
         	}
     }
  }
- 
+
+waterDescriptor {
+    moduleId    = 'it.water.sharedentity.spring'
+    displayName = 'Shared Entity Service Spring'
+    description = 'Spring Boot runtime variant of Shared Entity Service'
+    inheritsFrom project(':SharedEntity-service')
+}
