@@ -94,8 +94,11 @@ waterDescriptor {
     displayName = 'Shared Entity Service'
     description = 'Multi-tenancy shared entity ownership and sharing management for Water Framework'
 
-    input {
+    output {
         standardPin 'jdbc'
+    }
+
+    input {
         standardPin 'service-discovery'
     }
 }
