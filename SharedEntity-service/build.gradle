@@ -93,6 +93,9 @@ waterDescriptor {
     moduleId    = 'it.water.sharedentity'
     displayName = 'Shared Entity Service'
     description = 'Multi-tenancy shared entity ownership and sharing management for Water Framework'
+    componentsPackage = 'it.water.shared.entity.service'
+    repositoryPackage = 'it.water.shared.entity.repository'
+    entitiesPackage   = 'it.water.shared.entity.model'
 
     output {
         standardPin 'jdbc'
