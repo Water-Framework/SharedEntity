@@ -392,6 +392,144 @@ class SharedEntityApiTest implements Service {
         Assertions.assertThrows(EntityNotFound.class, () -> this.sharedEntityApi.save(existingEntity));
     }
 
+    // =========================================================
+    // #35 — caller-scoping hardening tests
+    // =========================================================
+
+    /**
+     * #35: findByUser called with own userId succeeds (non-admin caller).
+     */
+    @Test
+    @Order(16)
+    void findByUser_asSelf_succeeds() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityManagerUser, runtime);
+        long selfId = runtime.getSecurityContext().getLoggedEntityId();
+        // The manager user may have shares; at minimum the call must not throw.
+        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByUser(selfId));
+    }
+
+    /**
+     * #35: findByUser called with a DIFFERENT userId by a non-admin must throw UnauthorizedException.
+     */
+    @Test
+    @Order(17)
+    void findByUser_asOtherUser_throwsUnauthorized() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        // sharedEntityManagerUser has a different id; viewer must not enumerate manager's shares
+        long otherUserId = sharedEntityManagerUser.getId();
+        Assertions.assertThrows(UnauthorizedException.class,
+                () -> this.sharedEntityApi.findByUser(otherUserId));
+    }
+
+    /**
+     * #35: findByUser called by admin with any userId succeeds.
+     */
+    @Test
+    @Order(18)
+    void findByUser_asAdmin_withAnyUserId_succeeds() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long anyUserId = sharedEntityViewerUser.getId();
+        Assertions.assertDoesNotThrow(() -> this.sharedEntityApi.findByUser(anyUserId));
+    }
+
+    /**
+     * #35: getEntityIdsSharedWithUser called with own userId succeeds (non-admin caller).
+     */
+    @Test
+    @Order(19)
+    void getEntityIdsSharedWithUser_asSelf_succeeds() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        long selfId = runtime.getSecurityContext().getLoggedEntityId();
+        Assertions.assertDoesNotThrow(() ->
+                this.sharedEntityApi.getEntityIdsSharedWithUser(TestEntityResource.class.getName(), selfId));
+    }
+
+    /**
+     * #35: getEntityIdsSharedWithUser called with a DIFFERENT userId by a non-admin must throw.
+     */
+    @Test
+    @Order(20)
+    void getEntityIdsSharedWithUser_asOtherUser_throwsUnauthorized() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        long otherUserId = sharedEntityManagerUser.getId();
+        Assertions.assertThrows(UnauthorizedException.class,
+                () -> this.sharedEntityApi.getEntityIdsSharedWithUser(TestEntityResource.class.getName(), otherUserId));
+    }
+
+    /**
+     * #35: getSharingUsers called by the actual owner (non-admin) of the entity succeeds.
+     * The manager user creates and owns an entity, then queries its sharing graph.
+     */
+    @Test
+    @Order(21)
+    void getSharingUsers_asNonAdminOwner_succeeds() {
+        // Impersonate manager user (non-admin) — they will become the owner
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityManagerUser, runtime);
+        long managerId = runtime.getSecurityContext().getLoggedEntityId();
+        // Create entity owned by manager
+        TestEntityResource resource = new TestEntityResource();
+        resource.setOwnerUserId(userIntegrationClient.fetchUserByUserId(managerId).getId());
+        testEntitySystemApi.save(resource);
+        // Share with viewer
+        WaterSharedEntity share = createSharedEntity(resource.getId(), sharedEntityViewerUser.getId());
+        this.sharedEntityApi.save(share);
+        // Manager owns the entity — getSharingUsers must succeed (non-admin owner path)
+        List<Long> sharingUsers = Assertions.assertDoesNotThrow(() ->
+                this.sharedEntityApi.getSharingUsers(TestEntityResource.class.getName(), resource.getId()));
+        Assertions.assertNotNull(sharingUsers);
+        Assertions.assertTrue(sharingUsers.contains(sharedEntityViewerUser.getId()));
+    }
+
+    /**
+     * #35: getSharingUsers called by a user who does NOT own the entity must throw UnauthorizedException.
+     */
+    @Test
+    @Order(22)
+    void getSharingUsers_asNonOwner_throwsUnauthorized() {
+        // First create entity as admin and share with viewer
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long adminId = runtime.getSecurityContext().getLoggedEntityId();
+        TestEntityResource resource = new TestEntityResource();
+        resource.setOwnerUserId(userIntegrationClient.fetchUserByUserId(adminId).getId());
+        testEntitySystemApi.save(resource);
+        WaterSharedEntity share = createSharedEntity(resource.getId(), sharedEntityViewerUser.getId());
+        this.sharedEntityApi.save(share);
+
+        // Now impersonate viewer — they are NOT the owner, must be rejected
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        long entityId = resource.getId();
+        Assertions.assertThrows(UnauthorizedException.class,
+                () -> this.sharedEntityApi.getSharingUsers(TestEntityResource.class.getName(), entityId));
+    }
+
+    /**
+     * #35: getSharingUsers called by admin on any entity succeeds (admin bypass).
+     */
+    @Test
+    @Order(23)
+    void getSharingUsers_asAdmin_bypass_succeeds() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long userId = runtime.getSecurityContext().getLoggedEntityId();
+        TestEntityResource resource = new TestEntityResource();
+        resource.setOwnerUserId(userIntegrationClient.fetchUserByUserId(userId).getId());
+        testEntitySystemApi.save(resource);
+        // Admin can query getSharingUsers even on entities with no shares
+        Assertions.assertDoesNotThrow(() ->
+                this.sharedEntityApi.getSharingUsers(TestEntityResource.class.getName(), resource.getId()));
+    }
+
+    /**
+     * #35: getSharingUsers with an unknown resource class name (not a SharedEntity) must throw UnauthorizedException
+     * because the entity class cannot be resolved.
+     */
+    @Test
+    @Order(24)
+    void getSharingUsers_withUnknownResourceClass_throwsUnauthorized() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        Assertions.assertThrows(UnauthorizedException.class,
+                () -> this.sharedEntityApi.getSharingUsers("com.unknown.NonExistentClass", 1L));
+    }
+
 
     private WaterSharedEntity createSharedEntity(long entityId, long userId) {
         WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, userId);

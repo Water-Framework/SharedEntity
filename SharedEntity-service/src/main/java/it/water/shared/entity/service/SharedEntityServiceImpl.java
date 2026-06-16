@@ -7,6 +7,7 @@ import it.water.core.api.entity.shared.SharedEntity;
 import it.water.core.api.model.Resource;
 import it.water.core.api.model.User;
 import it.water.core.api.permission.PermissionManager;
+import it.water.core.api.permission.SecurityContext;
 import it.water.core.api.registry.ComponentRegistry;
 import it.water.core.api.repository.query.Query;
 import it.water.core.api.service.BaseEntitySystemApi;
@@ -226,6 +227,9 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
 
     /**
      * Finds and returns a list of shared entities associated with the specified user ID.
+     * <p>
+     * #35 hardening: the sharing graph is authorization metadata. A caller may only enumerate
+     * their own shares — passing another user's id is rejected. Admins may query freely.
      *
      * @param userId the ID of the user whose shared entities should be retrieved.
      * @return a list of WaterSharedEntity objects that are associated with the specified user ID.
@@ -233,11 +237,17 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @Override
     public List<WaterSharedEntity> findByUser(long userId) {
+        checkCallerCanQueryUser(userId);
         return systemService.findByUser(userId);
     }
 
     /**
      * Retrieves a list of IDs of users who have sharing permissions on the specified entity.
+     * <p>
+     * #35 hardening: only the owner of the referenced entity (or an admin) may enumerate who the
+     * entity is shared with. The ownership check mirrors the one enforced by {@link #save} /
+     * {@link #removeByPK} (it reloads the persisted entity through its system service and verifies
+     * real ownership), so a caller cannot map the sharing graph of resources they do not own.
      *
      * @param entityResourceName the name of the entity resource to search for sharing users.
      * @param entityId the ID of the entity for which sharing users are to be retrieved.
@@ -246,11 +256,15 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @Override
     public List<Long> getSharingUsers(String entityResourceName, long entityId) {
+        checkCallerOwnsReferencedEntity(entityResourceName, entityId);
         return systemService.getSharingUsers(entityResourceName, entityId);
     }
 
     /**
      * Retrieves a list of entity IDs shared with a particular user.
+     * <p>
+     * #35 hardening: caller-scoped — a non-admin may only ask for the entities shared with
+     * themselves; passing another user's id is rejected.
      *
      * @param entityResourceName the name of the entity resource to search for shared entities.
      * @param userId the ID of the user with whom the entities are shared.
@@ -259,7 +273,48 @@ public class SharedEntityServiceImpl extends BaseEntityServiceImpl<WaterSharedEn
     @AllowGenericPermissions(actions = CrudActions.FIND)
     @Override
     public List<Long> getEntityIdsSharedWithUser(String entityResourceName, long userId) {
+        checkCallerCanQueryUser(userId);
         return systemService.getEntityIdsSharedWithUser(entityResourceName, userId);
+    }
+
+    /**
+     * #35: a non-admin caller may only enumerate sharing metadata scoped to their own user id.
+     * Rejecting a mismatch (rather than silently rewriting userId) keeps the method semantics explicit.
+     */
+    private void checkCallerCanQueryUser(long userId) {
+        SecurityContext securityContext = this.getRuntime().getSecurityContext();
+        if (securityContext == null)
+            throw new UnauthorizedException();
+        if (securityContext.isAdmin())
+            return;
+        if (userId != securityContext.getLoggedEntityId())
+            throw new UnauthorizedException();
+    }
+
+    /**
+     * #35: verify the caller really owns the referenced entity before exposing its sharing graph.
+     * Reloads the persisted entity through its system service (same approach as save/removeByPK) so a
+     * spoofed payload cannot bypass the check. Admins bypass.
+     */
+    private void checkCallerOwnsReferencedEntity(String entityResourceName, long entityId) {
+        SecurityContext securityContext = this.getRuntime().getSecurityContext();
+        if (securityContext == null)
+            throw new UnauthorizedException();
+        if (securityContext.isAdmin())
+            return;
+        Class<?> entityClass = getEntityClass(entityResourceName);
+        if (entityClass == null || !SharedEntity.class.isAssignableFrom(entityClass))
+            throw new UnauthorizedException("Entity is not a Shared Entity or Shared Entity Class not found!");
+        User user = this.userIntegrationClient.fetchUserByUserId(securityContext.getLoggedEntityId());
+        BaseEntitySystemApi<? extends WaterSharedEntity> entitySystemService = this.componentRegistry.findEntitySystemApi(entityResourceName);
+        Resource resource;
+        try {
+            resource = entitySystemService.find(entityId);
+        } catch (NoResultException exception) {
+            throw new EntityNotFound();
+        }
+        if (user == null || !permissionManager.checkUserOwnsResource(user, resource))
+            throw new UnauthorizedException();
     }
 
     private Class<?> getEntityClass(String resourceName) {
