@@ -531,6 +531,212 @@ class SharedEntityApiTest implements Service {
     }
 
 
+    // =========================================================
+    // #35 hardening — additional branch coverage (null security context,
+    // non-SharedEntity classes, missing referenced entities)
+    // =========================================================
+
+    /**
+     * checkCallerCanQueryUser: securityContext == null -> UnauthorizedException.
+     * Exercised through the public findByUser entry point.
+     */
+    @Test
+    @Order(25)
+    void findByUser_nullSecurityContext_throwsUnauthorized() {
+        runtime.fillSecurityContext(null);
+        try {
+            Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.findByUser(1L));
+        } finally {
+            TestRuntimeUtils.impersonateAdmin(componentRegistry);
+        }
+    }
+
+    /**
+     * checkCallerOwnsReferencedEntity: securityContext == null -> UnauthorizedException.
+     * Exercised through the public getSharingUsers entry point.
+     */
+    @Test
+    @Order(26)
+    void getSharingUsers_nullSecurityContext_throwsUnauthorized() {
+        runtime.fillSecurityContext(null);
+        try {
+            Assertions.assertThrows(UnauthorizedException.class,
+                    () -> this.sharedEntityApi.getSharingUsers(TestEntityResource.class.getName(), 1L));
+        } finally {
+            TestRuntimeUtils.impersonateAdmin(componentRegistry);
+        }
+    }
+
+    /**
+     * checkCallerOwnsReferencedEntity: entityClass resolved but does NOT implement SharedEntity
+     * -> UnauthorizedException. Distinct from the "class not found" branch already covered by
+     * getSharingUsers_withUnknownResourceClass_throwsUnauthorized.
+     */
+    @Test
+    @Order(27)
+    void getSharingUsers_withNonSharedEntityClass_throwsUnauthorized() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        Assertions.assertThrows(UnauthorizedException.class,
+                () -> this.sharedEntityApi.getSharingUsers(String.class.getName(), 1L));
+    }
+
+    /**
+     * checkCallerOwnsReferencedEntity: referenced entity id does not exist -> EntityNotFound
+     * (NoResultException from the entity system service is translated).
+     */
+    @Test
+    @Order(28)
+    void getSharingUsers_withNonExistentEntityId_throwsEntityNotFound() {
+        TestRuntimeInitializer.getInstance().impersonate(sharedEntityViewerUser, runtime);
+        Assertions.assertThrows(EntityNotFound.class,
+                () -> this.sharedEntityApi.getSharingUsers(TestEntityResource.class.getName(), 987654321L));
+    }
+
+    /**
+     * setSharedEntityUserId: entity.getUserId() > 0 and the user exists -> the else-branch
+     * resolves the user via fetchUserByUserId and the share is persisted successfully.
+     * (The NoResultException -> WaterRuntimeException sub-path is not reachable with the
+     * in-memory test user client, which returns null for missing ids instead of throwing.)
+     */
+    @Test
+    @Order(29)
+    void saveOkTargetUserIdResolvedViaElseBranch() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long userId = runtime.getSecurityContext().getLoggedEntityId();
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setOwnerUserId(userIntegrationClient.fetchUserByUserId(userId).getId());
+        testEntitySystemApi.save(testEntityResource);
+        WaterSharedEntity entity = createSharedEntity(testEntityResource.getId(), userId);
+        WaterSharedEntity saved = this.sharedEntityApi.save(entity);
+        Assertions.assertNotNull(saved);
+        Assertions.assertEquals(userId, saved.getUserId());
+    }
+
+    /**
+     * save(): entityClass IS resolved but does NOT implement SharedEntity -> UnauthorizedException.
+     * Distinct from the "class not found" branch already covered by saveKoClassNotFound.
+     */
+    @Test
+    @Order(30)
+    void saveKoEntityClassNotSharedEntity() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        WaterSharedEntity entity = new WaterSharedEntity(String.class.getName(), 1L, 1L);
+        entity.setUserId(1L);
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.save(entity));
+    }
+
+    /**
+     * save(): non-admin caller with NO role at all (hence no SHARE permission) -> UnauthorizedException.
+     * Distinct from the ownership-mismatch branch already covered by saveKoResourceIdNotExists.
+     */
+    @Test
+    @Order(31)
+    void saveKoUserWithoutSharePermission() {
+        it.water.core.api.model.User noRoleUser = userManager.addUser("norole", "name", "lastname", "norole@a.com", "Password1_", "salt", false);
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        TestEntityResource testEntityResource = new TestEntityResource();
+        testEntityResource.setOwnerUserId(adminUser.getId());
+        testEntitySystemApi.save(testEntityResource);
+        TestRuntimeInitializer.getInstance().impersonate(noRoleUser, runtime);
+        WaterSharedEntity entity = createSharedEntity(testEntityResource.getId(), noRoleUser.getId());
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.save(entity));
+    }
+
+    /**
+     * removeByPK(): non-admin caller with NO role at all (hence no SHARE permission) -> UnauthorizedException.
+     * Distinct from the ownership-mismatch branch already covered by viewerCannotSaveOrUpdateOrRemove/editorCannotRemove.
+     */
+    @Test
+    @Order(32)
+    void removeByPKKoUserWithoutSharePermission() {
+        it.water.core.api.model.User noRoleUser2 = userManager.addUser("norole2", "name", "lastname", "norole2@a.com", "Password1_", "salt", false);
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        TestEntityResource resource = new TestEntityResource();
+        resource.setOwnerUserId(adminUser.getId());
+        testEntitySystemApi.save(resource);
+        WaterSharedEntity shared = createSharedEntity(resource.getId(), adminUser.getId());
+        this.sharedEntityApi.save(shared);
+        TestRuntimeInitializer.getInstance().impersonate(noRoleUser2, runtime);
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.removeByPK(shared));
+    }
+
+    /**
+     * removeByPK(): the referenced entity id does not exist -> EntityNotFound
+     * (NoResultException from the entity system service is translated).
+     */
+    @Test
+    @Order(33)
+    void removeByPKKoEntityIdNotFound() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        WaterSharedEntity entity = createSharedEntity(999999997L, adminUser.getId());
+        Assertions.assertThrows(EntityNotFound.class, () -> this.sharedEntityApi.removeByPK(entity));
+    }
+
+    /**
+     * removeByPK(): referenced entity has a null ownerUserId (defaults to 0L) which does not match
+     * the logged-in user -> UnauthorizedException. Covers the null-ternary branch.
+     */
+    @Test
+    @Order(34)
+    void removeByPKKoOwnerUserIdNull() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        TestEntityResource resource = new TestEntityResource();
+        // intentionally NOT setting ownerUserId -> stays null
+        testEntitySystemApi.save(resource);
+        WaterSharedEntity entity = createSharedEntity(resource.getId(), adminUser.getId());
+        Assertions.assertThrows(UnauthorizedException.class, () -> this.sharedEntityApi.removeByPK(entity));
+    }
+
+    /**
+     * removeByPK(): caller owns the referenced entity, but no WaterSharedEntity association exists
+     * for the given primary key -> EntityNotFound (the "entity == null" else-branch).
+     */
+    @Test
+    @Order(35)
+    void removeByPKKoSharedEntityNotFound() {
+        TestRuntimeInitializer.getInstance().impersonate(adminUser, runtime);
+        long userId = runtime.getSecurityContext().getLoggedEntityId();
+        TestEntityResource resource = new TestEntityResource();
+        resource.setOwnerUserId(userId);
+        testEntitySystemApi.save(resource);
+        // NOT calling sharedEntityApi.save(...) so no association is persisted
+        WaterSharedEntity entity = createSharedEntity(resource.getId(), userId);
+        Assertions.assertThrows(EntityNotFound.class, () -> this.sharedEntityApi.removeByPK(entity));
+    }
+
+    // =========================================================
+    // Repository layer — direct coverage of "not found" branches
+    // =========================================================
+
+    @Test
+    @Order(36)
+    void repositoryFindByPK_notFound_returnsNull() {
+        WaterSharedEntity result = this.sharedEntityRepository.findByPK("not.existing.Class", 123456789L, 123456789L);
+        Assertions.assertNull(result);
+    }
+
+    @Test
+    @Order(37)
+    void repositoryFindByEntity_notFound_returnsEmptyList() {
+        List<WaterSharedEntity> result = this.sharedEntityRepository.findByEntity("not.existing.Class", 123456789L);
+        Assertions.assertNotNull(result);
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @Order(38)
+    void repositoryFindByUser_notFound_returnsEmptyList() {
+        List<WaterSharedEntity> result = this.sharedEntityRepository.findByUser(-123456789L);
+        Assertions.assertNotNull(result);
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @Order(39)
+    void repositoryRemoveByPK_notFound_doesNothing() {
+        Assertions.assertDoesNotThrow(() -> this.sharedEntityRepository.removeByPK("not.existing.Class", 123456789L, 123456789L));
+    }
+
     private WaterSharedEntity createSharedEntity(long entityId, long userId) {
         WaterSharedEntity entity = new WaterSharedEntity(TestEntityResource.class.getName(), entityId, userId);
         entity.setUserId(userId);
