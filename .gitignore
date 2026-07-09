@@ -14,3 +14,5 @@ gradlew
 gradlew.bat
 /gradle
 .gradle
+/.claude/agent-memory/water-test-engineer/MEMORY.md
+/.claude/agent-memory/water-test-engineer/shared_entity_coverage_patterns.md
