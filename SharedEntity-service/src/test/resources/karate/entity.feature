@@ -87,7 +87,7 @@ Feature: Check SharedEntity Rest Api Response
       "tagIds": #null
     }
     """
-  
+
   # --------------- DELETE BY PK-----------------------------
 
     Given header Content-Type = 'application/json'

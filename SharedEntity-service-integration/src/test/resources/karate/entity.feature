@@ -21,7 +21,9 @@ Feature: Check SharedEntity Rest Api Response
         "entityVersion":1,
         "entityCreateDate":'#number',
         "entityModifyDate":'#number',
-        "exampleField": 'exampleField'
+        "exampleField": 'exampleField',
+        "categoryIds": #null,
+        "tagIds": #null
        }
     """
     * def entityId = response.id
@@ -49,10 +51,12 @@ Feature: Check SharedEntity Rest Api Response
         "entityVersion":2,
         "entityCreateDate":'#number',
         "entityModifyDate":'#number',
-        "exampleField": 'exampleFieldUpdated'
+        "exampleField": 'exampleFieldUpdated',
+        "categoryIds": #null,
+        "tagIds": #null
        }
     """
-  
+
   # --------------- FIND -----------------------------
 
     Given header Content-Type = 'application/json'
@@ -68,10 +72,12 @@ Feature: Check SharedEntity Rest Api Response
         "entityVersion":2,
         "entityCreateDate":'#number',
         "entityModifyDate":'#number',
-        "exampleField": 'exampleFieldUpdated'
+        "exampleField": 'exampleFieldUpdated',
+        "categoryIds": #null,
+        "tagIds": #null
        }
     """
-    
+
   # --------------- FIND ALL -----------------------------
 
     Given header Content-Type = 'application/json'
@@ -92,7 +98,9 @@ Feature: Check SharedEntity Rest Api Response
             "entityVersion":2,
             "entityCreateDate":'#number',
             "entityModifyDate":'#number',
-            "exampleField": 'exampleFieldUpdated'
+            "exampleField": 'exampleFieldUpdated',
+            "categoryIds": #null,
+            "tagIds": #null
           }
         ]
       }
